@@ -1,0 +1,39 @@
+{
+  "headers": {
+    "x-github-event": "push",
+    "x-hub-signature-256": "sha256=example_signature_from_github",
+    "x-github-delivery": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "content-type": "application/json"
+  },
+  "body": {
+    "ref": "refs/heads/main",
+    "before": "abc1234oldsha00000000000000000000000000",
+    "after": "def5678newsha00000000000000000000000000",
+    "repository": {
+      "id": 123456789,
+      "name": "kharcha",
+      "full_name": "Princegautam007/kharcha",
+      "html_url": "https://github.com/Princegautam007/kharcha",
+      "description": "Smart expense tracker that reads your bank SMS automatically",
+      "private": false,
+      "default_branch": "main",
+      "updated_at": "2026-10-01T08:30:00.000Z"
+    },
+    "pusher": {
+      "name": "Princegautam007",
+      "email": "example@example.com"
+    },
+    "commits": [
+      {
+        "id": "def5678newsha00000000000000000000000000",
+        "message": "Update README",
+        "url": "https://github.com/Princegautam007/kharcha/commit/def5678newsha00000000000000000000000000",
+        "author": {
+          "name": "Princegautam007",
+          "email": "example@example.com"
+        }
+      }
+    ]
+  },
+  "notes": "This is what the GitHub Webhook node receives. The Filter Push Event node reads headers.x-github-event and only continues for push, repository, or create."
+}
