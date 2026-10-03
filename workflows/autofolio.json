@@ -1,0 +1,360 @@
+{
+  "name": "autofolio",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "GitHub Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "github-push",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-push",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "responseData": "allEntries",
+        "authentication": "headerAuth",
+        "headerAuth": {},
+        "options": {}
+      },
+      "credentials": {
+        "headerAuth": {
+          "id": null,
+          "name": "GitHub webhook header auth (X-Hub-Signature-256)"
+        }
+      },
+      "notes": "Listens for GitHub webhooks on POST /github-push. Configure Header Auth to check X-Hub-Signature-256 using WEBHOOK_SECRET. Responds 200 immediately so GitHub does not time out."
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Filter Push Event",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-push",
+              "leftValue": "={{ $json.headers['x-github-event'] }}",
+              "rightValue": "push",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-repository",
+              "leftValue": "={{ $json.headers['x-github-event'] }}",
+              "rightValue": "repository",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-create",
+              "leftValue": "={{ $json.headers['x-github-event'] }}",
+              "rightValue": "create",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "notes": "Only continues for push, repository, or create events based on X-GitHub-Event header. All other events stop here."
+    },
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Fetch Portfolio Repos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.github.com/users/' + $env.GITHUB_USERNAME + '/repos' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "public"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "sort",
+              "value": "updated"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Fetches all public repos for GITHUB_USERNAME. Auth uses GITHUB_TOKEN from env. Query: type=public, per_page=100, sort=updated."
+    },
+    {
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Filter and Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.all();\nconst flat = input.length === 1 && Array.isArray(input[0].json) ? input[0].json : input.map((i) => i.json);\nconst repos = Array.isArray(flat) ? flat : [flat];\nconst matching = repos.filter((repo) => Array.isArray(repo.topics) && repo.topics.includes('portfolio'));\nconst projects = matching.map((repo) => {\n  return {\n    id: repo.id,\n    name: repo.name,\n    description: repo.description,\n    url: repo.html_url,\n    homepage: repo.homepage,\n    language: repo.language,\n    languages: [],\n    stars: repo.stargazers_count,\n    forks: repo.forks_count,\n    topics: repo.topics,\n    updatedAt: repo.updated_at,\n    createdAt: repo.created_at,\n    isArchived: repo.archived,\n    defaultBranch: repo.default_branch\n  };\n});\nprojects.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));\nreturn [{ json: { generated: new Date().toISOString(), count: projects.length, projects } }];"
+      },
+      "notes": "Keeps repos with portfolio topic, maps to clean schema, sorts by updatedAt descending, wraps in generated, count, projects."
+    },
+    {
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Fetch Languages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_USERNAME + '/' + $json.projects[0].name + '/languages' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Called per project. Uses GITHUB_USERNAME and each project name. Merges byte counts into percent per language, rounded to 1 decimal. See Code note for merge logic run after this node in SplitInBatches loop, or use sub workflow per project."
+    },
+    {
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Get Current File SHA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_USERNAME + '/' + $env.PORTFOLIO_REPO + '/contents/projects.json' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Gets current projects.json SHA so we can update it. If file does not exist yet (404), onError continues and SHA is treated as null for create."
+    },
+    {
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Commit projects.json",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_USERNAME + '/' + $env.PORTFOLIO_REPO + '/contents/projects.json' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: 'chore: auto-update projects.json', content: Buffer.from(JSON.stringify($('Filter and Format').first().json, null, 2)).toString('base64'), sha: $('Get Current File SHA').first().json.sha || undefined, branch: 'main' }) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Creates or updates projects.json in one PUT. Body has message, base64 content, sha from previous node, branch main. Vercel redeploys on this commit."
+    },
+    {
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Telegram Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: 'Portfolio updated. ' + $('Filter and Format').first().json.count + ' projects synced.' }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Optional. Only works if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are set. onError is continue so missing config does not break the workflow. Wrap logic: if env vars empty, this call fails silently and workflow still succeeds."
+    }
+  ],
+  "connections": {
+    "GitHub Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Push Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Push Event": {
+      "main": [
+        [
+          {
+            "node": "Fetch Portfolio Repos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Portfolio Repos": {
+      "main": [
+        [
+          {
+            "node": "Filter and Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter and Format": {
+      "main": [
+        [
+          {
+            "node": "Fetch Languages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Languages": {
+      "main": [
+        [
+          {
+            "node": "Get Current File SHA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current File SHA": {
+      "main": [
+        [
+          {
+            "node": "Commit projects.json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commit projects.json": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
