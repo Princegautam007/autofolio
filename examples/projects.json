@@ -1,0 +1,72 @@
+{
+  "generated": "2026-10-04T12:00:00.000Z",
+  "count": 3,
+  "projects": [
+    {
+      "id": 123456789,
+      "name": "kharcha",
+      "description": "Smart expense tracker that reads your bank SMS automatically",
+      "url": "https://github.com/Princegautam007/kharcha",
+      "homepage": "https://princegautam007.github.io/kharcha",
+      "language": "JavaScript",
+      "languages": [
+        {
+          "name": "JavaScript",
+          "percent": 78.4
+        },
+        {
+          "name": "Kotlin",
+          "percent": 14.2
+        },
+        {
+          "name": "HTML",
+          "percent": 7.4
+        }
+      ],
+      "stars": 12,
+      "forks": 3,
+      "topics": ["portfolio", "expense-tracker", "android", "javascript"],
+      "updatedAt": "2026-10-01T08:30:00.000Z",
+      "createdAt": "2026-09-01T10:00:00.000Z",
+      "isArchived": false,
+      "defaultBranch": "main"
+    },
+    {
+      "id": 987654321,
+      "name": "autofolio",
+      "description": "Keep your portfolio in sync with GitHub automatically using n8n",
+      "url": "https://github.com/Princegautam007/autofolio",
+      "homepage": null,
+      "language": "JavaScript",
+      "languages": [
+        {
+          "name": "JavaScript",
+          "percent": 100.0
+        }
+      ],
+      "stars": 5,
+      "forks": 1,
+      "topics": ["portfolio", "n8n", "github-api", "automation"],
+      "updatedAt": "2026-09-28T14:15:00.000Z",
+      "createdAt": "2026-09-20T09:00:00.000Z",
+      "isArchived": false,
+      "defaultBranch": "main"
+    },
+    {
+      "id": 555555555,
+      "name": "old-notes-app",
+      "description": null,
+      "url": "https://github.com/Princegautam007/old-notes-app",
+      "homepage": "",
+      "language": null,
+      "languages": [],
+      "stars": 0,
+      "forks": 0,
+      "topics": ["portfolio", "notes"],
+      "updatedAt": "2026-08-10T11:00:00.000Z",
+      "createdAt": "2026-07-01T12:00:00.000Z",
+      "isArchived": true,
+      "defaultBranch": "master"
+    }
+  ]
+}
